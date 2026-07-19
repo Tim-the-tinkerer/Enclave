@@ -1,0 +1,25 @@
+HOW TO REBUILD ENCLAVE
+======================
+
+Whenever you have an updated version of this folder, here is ALL you do:
+
+1. Keep this whole folder together in one place.
+
+2. Double-click:  BUILD INSTALLER.bat
+
+   A window opens and does everything by itself:
+     - checks the app is healthy (self-test)
+     - builds the app
+     - builds the installer
+   Then it pops open a folder with your new installer:
+     Output\EnclaveSetup-1.7.0.exe
+
+3. That EnclaveSetup file IS your app. Double-click it to install it,
+   or send it to someone else to install.
+
+If the window shows a red "FAILED" line, copy what it says and send it
+to Claude - it will tell you which step to fix.
+
+Note: the first time you run the installer, Windows may say
+"Windows protected your PC". That is normal for a free app. Click
+"More info", then "Run anyway".

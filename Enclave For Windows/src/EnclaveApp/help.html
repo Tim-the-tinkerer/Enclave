@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Enclave Help</title>
+    <style>
+        body {
+            font-family: "Segoe UI", -apple-system, "Helvetica Neue", sans-serif;
+            font-size: 14px;
+            line-height: 1.55;
+            color: #e8ecf2;
+            background: #12141c;
+            margin: 0;
+            padding: 24px 28px 48px;
+            max-width: 820px;
+        }
+        h1 { color: #7ab8ff; font-size: 24px; font-weight: 700; margin: 0 0 8px; }
+        h2 {
+            color: #9ec5ff; font-size: 16px; font-weight: 600;
+            margin: 30px 0 8px; border-bottom: 1px solid #2a3140; padding-bottom: 4px;
+        }
+        p, li { margin: 0 0 10px; }
+        ul, ol { margin: 0 0 12px; padding-left: 22px; }
+        strong { color: #f0f3f8; }
+        code {
+            font-family: Consolas, Menlo, monospace; font-size: 13px;
+            background: #1a1f2b; border: 1px solid #2a3140; border-radius: 4px; padding: 1px 5px;
+        }
+        pre {
+            font-family: Consolas, Menlo, monospace; font-size: 13px;
+            background: #1a1f2b; border: 1px solid #2a3140; border-radius: 8px;
+            padding: 12px 14px; overflow-x: auto; margin: 0 0 14px;
+        }
+        .subtitle { color: #8b93a3; margin-bottom: 20px; }
+        .note {
+            background: #1a2030; border-left: 3px solid #5a9cf8;
+            padding: 10px 14px; border-radius: 0 6px 6px 0; margin: 12px 0;
+        }
+    </style>
+</head>
+<body>
+
+<h1>Enclave Help</h1>
+<p class="subtitle">AES-256-GCM file encryption for Windows &middot; Version 1.7.0 (build 19)</p>
+
+<p>Enclave encrypts files and folders with a password. By default the original filename is also encrypted, and the saved <code>.enclave</code> name is a 32-character <strong>SHA-512</strong> fingerprint. Turn off <strong>Encrypt filename</strong> to keep the original name in the archive and on disk.</p>
+
+<div class="note">
+    <strong>Works with the Mac version.</strong> Enclave uses the same file format on Windows and macOS, so a <code>.enclave</code> file made on one will open on the other with the same password.
+</div>
+
+<h2>Quick Start</h2>
+<ol>
+    <li>Type your password.</li>
+    <li>Leave <strong>Encrypt filename</strong> on (default) to hide the name, or turn it off to keep it visible.</li>
+    <li>Drag a file or folder onto the window, or click <strong>Choose File&hellip;</strong> or <strong>Choose Folder&hellip;</strong></li>
+    <li>Click <strong>Encrypt</strong> or <strong>Decrypt</strong>.</li>
+    <li>Choose where to save the result.</li>
+</ol>
+
+<p><strong>Double-clicking a <code>.enclave</code> file</strong> opens Enclave with that file already loaded and the cursor in the password box &mdash; just type the password and click Decrypt.</p>
+
+<h2>Folder Encryption</h2>
+<p>Folders are packed into an <code>ENCLPKG1</code> bundle (original paths preserved), then encrypted as a single <code>.enclave</code> archive. With filename encryption on, the internal name ends with <code>.enclavefolder</code>. With it off, the archive uses the plain folder title (for example, <code>Projects.enclave</code>).</p>
+<ul>
+    <li>Decrypting a folder archive asks for a <strong>parent folder</strong>; Enclave re-creates the original folder inside it.</li>
+    <li>Symbolic links, junctions, and hidden files (names starting with <code>.</code>) are skipped when packing.</li>
+    <li>Decrypt will not overwrite an existing, non-empty destination folder.</li>
+    <li>Per-file and total size limits apply (the same maximum as a single encrypted file).</li>
+</ul>
+
+<h2>How It Works</h2>
+<ul>
+    <li><strong>AES-256-GCM</strong> encrypts the file contents. The filename is encrypted by default (plaintext mode optional).</li>
+    <li>The <strong>header is authenticated</strong> as AES-GCM additional data. Tampering with the version, flags, key-derivation block, or salt makes decryption fail. From v5, the stored filename is authenticated too &mdash; even in plaintext mode &mdash; so altering it is detected.</li>
+</ul>
+
+<h2>Algorithms</h2>
+<p>Enclave uses different algorithms for different jobs &mdash; SHA-512 is <em>not</em> used to derive keys for new files.</p>
+<ul>
+    <li><strong>Key derivation (new files):</strong> <strong>Argon2id</strong> (BLAKE2b internally) from your password and a 32-byte random salt. Default: 65,536 KiB memory, 3 iterations, 1 lane (~64 MiB RAM per operation).</li>
+    <li><strong>Key derivation (older v3):</strong> <strong>PBKDF2-HMAC-SHA256</strong>. The iteration count is stored in the header and stays decryptable.</li>
+    <li><strong>Key derivation (v2 legacy):</strong> <strong>HKDF-SHA512</strong>. Decrypt-only; re-encrypt to upgrade.</li>
+    <li><strong>On-disk filename only:</strong> <strong>SHA-512</strong> over <code>salt + encrypted-filename</code>; the first 32 hex digits become the <code>.enclave</code> name. This hides the real filename &mdash; it does not strengthen your password.</li>
+    <li><strong>Encryption:</strong> AES-256-GCM with authentication tags.</li>
+</ul>
+
+<h2>File Format</h2>
+<ul>
+    <li>Magic: <code>ENCLAVE1</code> (8 bytes). Current version: <strong>v5</strong>.</li>
+    <li><strong>v5:</strong> magic &rarr; version (5) &rarr; flags (bit 0 = encrypt filename) &rarr; KDF id &rarr; KDF length &rarr; KDF params &rarr; 32-byte salt &rarr; filename blob &rarr; encrypted file blob. The file blob authenticates the header <em>and</em> the filename.</li>
+    <li><strong>v4:</strong> same layout, but only the header is authenticated. Still decryptable.</li>
+    <li><strong>v3:</strong> like v4 without the flags byte; filename always encrypted.</li>
+    <li><strong>KDF ids:</strong> 1 = PBKDF2-HMAC-SHA256, 2 = Argon2id (default for new files).</li>
+    <li><strong>v2:</strong> salt-only header, HKDF-SHA512, no header authentication. Still decryptable; re-encrypt to upgrade.</li>
+</ul>
+
+<div class="note">
+    <strong>Performance:</strong> Argon2id deliberately uses memory and CPU time to slow offline password guessing, so expect a short pause on each operation.
+</div>
+
+<h2>Command Line (optional)</h2>
+<p>Most people can ignore this and just use the app. If you want it, a console version <code>enclave-cli.exe</code> is produced under <code>src\EnclaveCli\bin\Release\net8.0</code> when you build:</p>
+<pre>enclave-cli encrypt myfile.pdf -p "your-password"
+enclave-cli encrypt myfile.pdf -p "your-password" --plaintext-filename
+enclave-cli decrypt a3f8b2c1....enclave -p "your-password"
+enclave-cli selftest</pre>
+<p>If you leave off <code>-p</code>, it asks for the password without showing it.</p>
+
+<h2>Password Tips</h2>
+<ul>
+    <li>Use a long, unique password you can remember or keep in a password manager.</li>
+    <li>If you forget the password, the file <strong>cannot</strong> be recovered.</li>
+    <li>Avoid <code>-p password</code> on shared computers &mdash; it can appear in process lists. Let the command line prompt you instead.</li>
+</ul>
+
+<div class="note">
+    <strong>Security note:</strong> Enclave protects files at rest. Keep backups of important data and store passwords safely.
+</div>
+
+</body>
+</html>

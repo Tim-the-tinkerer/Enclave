@@ -1,0 +1,53 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Xcode / Swift
+DerivedData/
+*.xcuserstate
+*.xcuserdata/
+*.hmap
+*.ipa
+*.dSYM.zip
+*.dSYM
+.build/
+*.app
+
+# .NET / Visual Studio
+bin/
+obj/
+publish/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+project.lock.json
+artifacts/
+
+# Windows installer output
+Output/
+*.exe
+!**/tools/**/*.exe
+
+# Logs & temp
+*.log
+*.tmp
+*~
+*.swp
+
+# IDE
+.idea/
+.vscode/
+*.code-workspace
+
+# Secrets / local env
+.env
+.env.*
+*.pfx
+*.p12
+*.key
